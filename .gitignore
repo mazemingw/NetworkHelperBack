@@ -1,0 +1,23 @@
+# Runtime
+node_modules/
+.env
+.env.*
+!.env.example
+dev_auth_credentials.sql
+*.pem
+*.key
+*.p12
+*.pfx
+*.bak
+*.log
+.idea/
+.vscode/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
