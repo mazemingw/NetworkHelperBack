@@ -82,6 +82,8 @@ CREATE TABLE IF NOT EXISTS `lte_cell_params` (
   `site_type` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '站型（宏站/室分/微站等）',
   `antenna_height` decimal(5,1) DEFAULT NULL COMMENT '天线挂高(m)',
   `source` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '数据来源',
+  `extra_info` mediumtext COMMENT '附加业务信息，逗号分隔字段名=值',
+  `station_type` varchar(16) NOT NULL DEFAULT 'default' COMMENT 'default=普通LTE，nb-iot=NB-IoT',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
   KEY `idx_match_core` (`tac`,`pci`,`earfcn`) USING BTREE,

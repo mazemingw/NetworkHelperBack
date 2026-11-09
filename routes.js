@@ -2,6 +2,7 @@
 const router = express.Router();
 const db = require("./db");
 router.use('/efs-backups', require('./efs-backups').createEfsBackupRouter(db));
+const { readLteMetadata, lteMetadataChunks } = require("./lte-metadata");
 router.use(require("./nearby").createNearbyRouter(db));
 const crypto = require("crypto");
 const PopCore = require("@alicloud/pop-core");
@@ -1030,6 +1031,8 @@ router.post("/lte/site/query", async (req, res) => {
         cell_name: anchor.cell_name,
         site_type: anchor.site_type,
         source: anchor.source,
+        extra_info: anchor.extra_info ?? null,
+        station_type: anchor.station_type ?? "default",
       },
       enodeb_id: anchor.enodeb_id,
       sector_count: sectorCount,
@@ -1410,6 +1413,12 @@ router.post("/lte/cell-params/update", async (req, res) => {
   if (!requireSuperAdmin(req, res)) return;
 
   const body = req.body || {};
+  let metadata;
+  try {
+    metadata = readLteMetadata(body);
+  } catch (err) {
+    return res.status(400).json({ ok: false, error: err.message });
+  }
   const id = toIntOrNull(body.id);
   const eci = toIntOrNull(body.eci);
   if (id == null && eci == null) {
@@ -1444,6 +1453,8 @@ router.post("/lte/cell-params/update", async (req, res) => {
   if ("source" in body) {
     addUpdate("source", toNull(body.source));
   }
+  if (metadata.extraProvided) addUpdate("extra_info", metadata.extra_info);
+  if (metadata.stationProvided) addUpdate("station_type", metadata.station_type);
 
   if (updates.length === 0) {
     return res.status(400).json({ ok: false, error: "no_update_fields" });
@@ -1683,7 +1694,8 @@ router.post("/lte/cell-params/batch-upsert", async (req, res) => {
         azimuth: toIntOrNull(raw.azimuth),
         site_type: toNull(raw.siteType ?? raw.site_type),
         antenna_height: toFloatOrNull(raw.antennaHeight ?? raw.antenna_height),
-        source: toNull(raw.source) ?? requestSource
+        source: toNull(raw.source) ?? requestSource,
+        ...readLteMetadata(raw)
       };
 
       // 鑷冲皯婊¤冻涓€绉嶅敮涓€瀹氫綅璺緞锛屽惁鍒欒烦杩?
@@ -1711,12 +1723,12 @@ router.post("/lte/cell-params/batch-upsert", async (req, res) => {
       });
     }
 
-    const chunks = chunkArray(validRows, BATCH_SIZE);
+    const chunks = lteMetadataChunks(validRows, BATCH_SIZE);
 
     for (const chunk of chunks) {
       const values = [];
       const placeholders = chunk.map(() => {
-        return `(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        return `(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       }).join(", ");
 
       for (const r of chunk) {
@@ -1735,7 +1747,9 @@ router.post("/lte/cell-params/batch-upsert", async (req, res) => {
           r.azimuth,
           r.site_type,
           r.antenna_height,
-          r.source
+          r.source,
+          r.extra_info,
+          r.station_type
         );
       }
 
@@ -1743,7 +1757,7 @@ router.post("/lte/cell-params/batch-upsert", async (req, res) => {
         INSERT INTO lte_cell_params (
           tac, pci, enodeb_id, earfcn, cell_id, eci, local_cell_id,
           cell_name, sector_id, longitude, latitude, azimuth,
-          site_type, antenna_height, source
+          site_type, antenna_height, source, extra_info, station_type
         ) VALUES ${placeholders}
         ON DUPLICATE KEY UPDATE
           tac = VALUES(tac),
@@ -1761,6 +1775,8 @@ router.post("/lte/cell-params/batch-upsert", async (req, res) => {
           site_type = VALUES(site_type),
           antenna_height = VALUES(antenna_height),
           source = VALUES(source)
+          ${chunk[0].extraProvided ? ', extra_info = VALUES(extra_info)' : ''}
+          ${chunk[0].stationProvided ? ', station_type = VALUES(station_type)' : ''}
       `;
 
       const [result] = await db.query(sql, values);
@@ -1776,7 +1792,7 @@ router.post("/lte/cell-params/batch-upsert", async (req, res) => {
       affectedRows: totalAffected
     });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(err.statusCode || 500).json({ error: err.message });
   }
 });
 
