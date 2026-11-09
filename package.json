@@ -6,8 +6,8 @@
   "license": "Apache-2.0",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test nearby.test.js",
-    "check": "node --check server.js && node --check db.js && node --check routes.js && node --check nearby.js && node --check nearby-bands.js"
+    "test": "node --test nearby.test.js efs-backups.test.js diagnostics.test.js diagnostic-archive.test.js",
+    "check": "node --check server.js && node --check db.js && node --check routes.js && node --check nearby.js && node --check nearby-bands.js && node --check efs-backups.js && node --check diagnostics.js && node --check diagnostic-storage.js && node --check diagnostic-archive.js && node --check find-diagnostic.js"
   },
   "engines": {
     "node": ">=18"

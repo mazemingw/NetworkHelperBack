@@ -63,6 +63,8 @@ npm start
 
 ## 接口范围
 
+全局错误上报的部署要求、私有日志存储及 POST 协议见 [diagnostics-api.md](diagnostics-api.md)。**先发布后台并重启服务，再用新版客户端联调**；无需改表。日志启动时及每小时归档到私有 OSS，本地最多保留 7 天，默认额度 1 GiB；复用现有 OSS 配置并核对 `DIAGNOSTICS/*` 权限。OSS 副本不由后台定期删除。
+
 所有路由均位于 `/networkhelp` 下，当前使用 POST：
 
 | 路由组 | 用途 |

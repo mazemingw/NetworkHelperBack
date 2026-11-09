@@ -1,6 +1,7 @@
 ﻿const express = require("express");
 const router = express.Router();
 const db = require("./db");
+router.use('/efs-backups', require('./efs-backups').createEfsBackupRouter(db));
 router.use(require("./nearby").createNearbyRouter(db));
 const crypto = require("crypto");
 const PopCore = require("@alicloud/pop-core");
